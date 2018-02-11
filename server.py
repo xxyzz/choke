@@ -115,7 +115,7 @@ def disableDaily(bot, update):
 disableDaily_handler = CommandHandler('disable', disableDaily)
 
 def help(bot, update):
-    text = "Usage example: /start\nReport bug: [issue](https://github.com/xxyzz)"
+    text = "Usage example: /start\n[Report bug](https://github.com/xxyzz/choke/issues)"
     bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
 
 help_handler = CommandHandler('help', help)
@@ -132,7 +132,8 @@ def main():
     dispatcher.add_handler(disableDaily_handler)
     dispatcher.add_handler(help_handler)
 
-    updater.start_polling()
+    updater.start_webhook(listen="0.0.0.0", port=int(os.environ.get('PORT', '8443')), url_path=token)
+    updater.bot.set_webhook('https://' + os.environ.get('herokuUrl') + '.herokuapp.com/' + token)
     updater.idle()
 
 main()
