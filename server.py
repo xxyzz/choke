@@ -1,4 +1,4 @@
-import telegram, logging, json, requests, datetime, os
+import telegram, logging, json, requests, datetime, os, re
 from telegram.ext import Updater, CommandHandler, InlineQueryHandler
 from telegram import InlineQueryResultArticle, InputTextMessageContent
 from uuid import uuid4
@@ -19,14 +19,17 @@ def start(bot, update):
 start_handler = CommandHandler('start', start)
 
 def getAqiByCity(bot, update, args):
-    # get latitude and longitude
-    param = {'key': GmapToken}
-    resp = requests.get(url = GmapUrl + ' '.join(args), params = param)
-    if resp.json()['results'] == []:
-        update.message.reply_text('Wanna get high?')
+    if args == []:
+        update.message.reply_text('Please add location after command\nE.g. /aqi eiffel tower')
     else:
-        location = resp.json()['results'][0]['geometry']['location']
-        getAqiByLocation(str(location['lat']), str(location['lng']), update)
+        # get latitude and longitude
+        param = {'key': GmapToken}
+        resp = requests.get(url = GmapUrl + ' '.join(args), params = param)
+        if resp.json()['results'] == []:
+            update.message.reply_text('Wanna get high?')
+        else:
+            location = resp.json()['results'][0]['geometry']['location']
+            getAqiByLocation(str(location['lat']), str(location['lng']), update)
 
 aqiCity_handler = CommandHandler('aqi', getAqiByCity, pass_args=True)
 
@@ -96,12 +99,15 @@ def dailyCallback(bot, job):
         bot.send_message(chat_id=job.context[1], text= data['city']['name'] + '\naqi: ' + str(data['aqi']) + level + time)
 
 def dailyNotification(bot, update, args, job_queue):
-    context = []
-    context.append(args[:-1])
-    context.append(update.message.chat_id)
-    global job_daily
-    job_daily = job_queue.run_daily(dailyCallback, datetime.datetime.strptime(args[-1], '%H:%M').time(), context=context)
-    update.message.reply_text('Success!')
+    if len(args) <= 1 or not re.match('\d{2}:\d{2}$', str(args[-1])):
+        update.message.reply_text('Please use the right formate\nE.g. /daily eiffel tower 13:01')
+    else:
+        context = []
+        context.append(args[:-1])
+        context.append(update.message.chat_id)
+        global job_daily
+        job_daily = job_queue.run_daily(dailyCallback, datetime.datetime.strptime(args[-1], '%H:%M').time(), context=context)
+        update.message.reply_text('Success!')
 
 daily_handler = CommandHandler('daily', dailyNotification, pass_args=True, pass_job_queue=True)
 
@@ -132,6 +138,7 @@ def main():
     dispatcher.add_handler(disableDaily_handler)
     dispatcher.add_handler(help_handler)
 
+    # updater.start_polling()
     updater.start_webhook(listen="0.0.0.0", port=int(os.environ.get('PORT', '8443')), url_path=token)
     updater.bot.set_webhook('https://' + os.environ.get('herokuUrl') + '.herokuapp.com/' + token)
     updater.idle()
