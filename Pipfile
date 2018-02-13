@@ -5,6 +5,7 @@ verify_ssl = true
 [packages]
 python-telegram-bot = "*"
 requests = "*"
+pytz = "*"
 
 [requires]
-python_version = "3.6"
+python_full_version = "3.6.4"

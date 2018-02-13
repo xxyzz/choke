@@ -1,35 +1,38 @@
-import telegram, logging, json, requests, datetime, os, re
+import telegram, logging, json, requests, datetime, os, re, time, pytz
 from telegram.ext import Updater, CommandHandler, InlineQueryHandler
 from telegram import InlineQueryResultArticle, InputTextMessageContent
 from uuid import uuid4
+from pytz import timezone
 
 token = os.environ.get('token')
 aqiToken = os.environ.get('aqiToken')
 GmapToken = os.environ.get('GmapToken')
+GmapTimezoneToken = os.environ.get('GmapTimezoneToken')
 aqiUrl = 'https://api.waqi.info/'
 GmapUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address='
+GmapTimezoneUrl = 'https://maps.googleapis.com/maps/api/timezone/json'
 bot = telegram.Bot(token)
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 def start(bot, update):
-    text = "Check AQI: /aqi beijing\nSet daily notification: /daily beijing 13:01\nDisable daily notification: /disable\nAqi data form aqicn.org"
+    text = "Check AQI: /aqi eiffel tower\nSet daily notification: /daily eiffel tower 13:01\nDisable daily notification: /disable\nAqi data form aqicn.org"
     bot.send_message(chat_id=update.message.chat_id, text=text)
 
 start_handler = CommandHandler('start', start)
 
 def getAqiByCity(bot, update, args):
     if args == []:
-        update.message.reply_text('Please add location after command\nE.g. /aqi eiffel tower')
+        update.message.reply_text('Please add a address after the command\nE.g. /aqi eiffel tower')
+        return
+    # get latitude and longitude
+    param = {'key': GmapToken}
+    resp = requests.get(url = GmapUrl + ' '.join(args), params = param)
+    if resp.json()['results'] == []:
+        update.message.reply_text('Please enter a valide address')
     else:
-        # get latitude and longitude
-        param = {'key': GmapToken}
-        resp = requests.get(url = GmapUrl + ' '.join(args), params = param)
-        if resp.json()['results'] == []:
-            update.message.reply_text('Wanna get high?')
-        else:
-            location = resp.json()['results'][0]['geometry']['location']
-            getAqiByLocation(str(location['lat']), str(location['lng']), update)
+        location = resp.json()['results'][0]['geometry']['location']
+        getAqiByLocation(str(location['lat']), str(location['lng']), update)
 
 aqiCity_handler = CommandHandler('aqi', getAqiByCity, pass_args=True)
 
@@ -85,29 +88,39 @@ def getUpdateTime(time):
         return 'Updated on ' + time[11:16]
 
 def dailyCallback(bot, job):
-    param = {'key': GmapToken}
-    resp = requests.get(url = GmapUrl + ' '.join(job.context[0]), params = param)
-    if resp.json()['results'] == []:
-        bot.send_message(chat_id=job.context[1], text = 'Wanna get high?')
-    else:
-        location = resp.json()['results'][0]['geometry']['location']
-        param = {'token': aqiToken}
-        resp = requests.get(url = aqiUrl + 'feed/geo:' + str(location['lat']) + ';' + str(location['lng']) + '/', params=param)
-        data = resp.json()['data']
-        level = getLevel(data['aqi'])
-        time = getUpdateTime(data['time']['s'])
-        bot.send_message(chat_id=job.context[1], text= data['city']['name'] + '\naqi: ' + str(data['aqi']) + level + time)
+    param = {'token': aqiToken}
+    resp = requests.get(url = aqiUrl + 'feed/geo:' + job.context[0] + ';' + job.context[1] + '/', params=param)
+    data = resp.json()['data']
+    level = getLevel(data['aqi'])
+    updateTime = getUpdateTime(data['time']['s'])
+    bot.send_message(chat_id=job.context[2], text= data['city']['name'] + '\naqi: ' + str(data['aqi']) + level + updateTime)
 
 def dailyNotification(bot, update, args, job_queue):
+    # check input formate
     if len(args) <= 1 or not re.match('\d{2}:\d{2}$', str(args[-1])):
         update.message.reply_text('Please use the right formate\nE.g. /daily eiffel tower 13:01')
-    else:
-        context = []
-        context.append(args[:-1])
-        context.append(update.message.chat_id)
-        global job_daily
-        job_daily = job_queue.run_daily(dailyCallback, datetime.datetime.strptime(args[-1], '%H:%M').time(), context=context)
-        update.message.reply_text('Success!')
+        return
+    # get location
+    param = {'key': GmapToken}
+    resp = requests.get(url = GmapUrl + ' '.join(args[:-1]), params = param)
+    if resp.json()['results'] == []:
+        update.message.reply_text('Please enter a valide address')
+        return
+    
+    location = resp.json()['results'][0]['geometry']['location']
+    # get timezone
+    param = {'location': str(location['lat']) + ',' + str(location['lng']), 'timestamp': str(time.time()),'key': GmapTimezoneToken}
+    resp = requests.get(url = GmapTimezoneUrl, params = param)
+    timeZone = resp.json()['timeZoneId']
+    context = []
+    context.append(str(location['lat']))
+    context.append(str(location['lng']))
+    context.append(update.message.chat_id)
+    # set notification time. I hate timezone.
+    notificationTime = timezone(timeZone).localize(datetime.datetime.strptime(datetime.datetime.now().strftime('%Y%m') + args[-1], '%Y%m%H:%M')).astimezone(pytz.utc).time()
+    global job_daily
+    job_daily = job_queue.run_daily(dailyCallback, notificationTime, context=context)
+    update.message.reply_text('Success!')
 
 daily_handler = CommandHandler('daily', dailyNotification, pass_args=True, pass_job_queue=True)
 
