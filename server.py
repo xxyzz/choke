@@ -97,7 +97,7 @@ def dailyCallback(bot, job):
 
 def dailyNotification(bot, update, args, job_queue):
     # check input formate
-    if len(args) <= 1 or not re.match('\d{2}:\d{2}$', str(args[-1])):
+    if len(args) <= 1 or not re.match('\d{2}:\d{2}$', args[-1]):
         update.message.reply_text('Please use the right formate\nE.g. /daily eiffel tower 13:01')
         return
     # get location
@@ -125,11 +125,11 @@ def dailyNotification(bot, update, args, job_queue):
 daily_handler = CommandHandler('daily', dailyNotification, pass_args=True, pass_job_queue=True)
 
 def disableDaily(bot, update):
-    if 'job_daily' in globals():
+    if 'job_daily' not in globals() or job_daily.removed:
+        update.message.reply_text('No daily notification to disable')
+    else:
         job_daily.schedule_removal()
         update.message.reply_text('Success!')
-    else:
-        update.message.reply_text('No daily notification to disable')
 
 disableDaily_handler = CommandHandler('disable', disableDaily)
 
