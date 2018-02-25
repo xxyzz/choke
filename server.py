@@ -151,6 +151,7 @@ def main():
     dispatcher.add_handler(disableDaily_handler)
     dispatcher.add_handler(help_handler)
 
+    # uncomment the next line and comment the two webhook lines when run locally
     # updater.start_polling()
     updater.start_webhook(listen="0.0.0.0", port=int(os.environ.get('PORT', '8443')), url_path=token)
     updater.bot.set_webhook('https://' + os.environ.get('herokuUrl') + '.herokuapp.com/' + token)
