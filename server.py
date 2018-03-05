@@ -155,6 +155,6 @@ def main():
     # updater.start_polling()
     updater.start_webhook(listen="0.0.0.0", port=int(os.environ.get('PORT', '8443')), url_path=token)
     updater.bot.set_webhook('https://' + os.environ.get('herokuUrl') + '.herokuapp.com/' + token)
-    updater.idle()
+    # updater.idle()
 
 main()
