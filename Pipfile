@@ -9,4 +9,7 @@ pytz = "*"
 apscheduler = "*"
 
 [requires]
-python_full_version = "3.6.4"
+python_full_version = "3.7.0"
+
+[dev-packages]
+pylint = "*"

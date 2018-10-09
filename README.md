@@ -5,30 +5,39 @@ Choke is a telegram bot([@getAqiBot](https://t.me/getAqiBot)) that can check AQI
 ## Requirments
 
 * Python 3
-* pipenv
-* Telegram bot token
+* [pipenv](https://pipenv.readthedocs.io)
+* [Telegram bot token](https://core.telegram.org/bots#3-how-do-i-create-a-bot)
 * [aqicn API key](https://aqicn.org/data-platform/token/)
-* [Google Maps Geocoding API](https://developers.google.com/maps/documentation/geocoding/start)
-* [Google Maps Time Zone API](https://developers.google.com/maps/documentation/timezone/start)
-* Heroku account(optional)
+* [Heroku account(optional)](https://www.heroku.com)
+
+## Usefull Docs
+
+- [Getting Started on Heroku with Python](https://devcenter.heroku.com/articles/getting-started-with-python)
+
+- [Air Quality Programmatic APIs](https://aqicn.org/json-api/doc/)
+
+- [Nominatim](https://wiki.openstreetmap.org/wiki/Nominatim)
 
 ## Installation
 
-Create your .env file first
+Create your .env file first.
 
 ```
-token = 'your telegram bot token'
+runLocally = true
+telegramToken = 'your telegram bot token'
 aqiToken = 'your aqicn API key'
-GmapToken = 'your Google Maps Geocoding API key'
-GmapTimezoneToken = 'your Google Maps Time Zone API key'
-herokuUrl = 'your Heroku app's name like lit-bastion-5032'
+herokuURL = 'your Heroku app's name like lit-bastion-5032'
 ```
 
-Then run locally
+Then run locally:
 
 ```
-pipenv --three
-pipenv install
-pipenv shell
-heroku local
+$ pipenv --three
+$ pipenv run pip install pip==18.0
+$ pipenv install
+$ pipenv shell
+// test locally
+$ heroku local
+// deploy changes
+$ git push heroku master
 ```
